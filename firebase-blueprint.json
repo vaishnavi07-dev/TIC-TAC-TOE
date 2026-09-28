@@ -1,0 +1,77 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Public player profile and game statistics",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "displayName": { "type": "string", "maxLength": 100 },
+        "photoURL": { "type": "string", "maxLength": 1000 },
+        "wins": { "type": "number" },
+        "losses": { "type": "number" },
+        "draws": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "displayName", "wins", "losses", "draws"]
+    },
+    "Game": {
+      "title": "Game",
+      "description": "Match room metadata, player pairings, status, and current state summary",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "code": { "type": "string", "maxLength": 10 },
+        "mode": { "type": "string", "enum": ["ai", "pvp"] },
+        "status": { "type": "string", "enum": ["waiting", "in_progress", "completed", "abandoned"] },
+        "playerXUid": { "type": "string", "maxLength": 128 },
+        "playerXName": { "type": "string", "maxLength": 100 },
+        "playerXPhotoUrl": { "type": "string", "maxLength": 1000 },
+        "playerOUid": { "type": "string", "maxLength": 128 },
+        "playerOName": { "type": "string", "maxLength": 100 },
+        "playerOPhotoUrl": { "type": "string", "maxLength": 1000 },
+        "currentTurn": { "type": "string", "enum": ["X", "O"] },
+        "winner": { "type": "string", "enum": ["X", "O", "draw", "none"] },
+        "winningLine": { "type": "string", "maxLength": 20 },
+        "aiDifficulty": { "type": "string", "enum": ["easy", "medium", "impossible"] },
+        "eventCount": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "code", "mode", "status", "playerXUid", "playerXName", "currentTurn", "winner", "eventCount"]
+    },
+    "GameEvent": {
+      "title": "GameEvent",
+      "description": "Event in the event-sourced log of game actions (turn move or rollback)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "gameId": { "type": "string", "maxLength": 128 },
+        "sequence": { "type": "number" },
+        "type": { "type": "string", "enum": ["MOVE", "ROLLBACK"] },
+        "player": { "type": "string", "enum": ["X", "O"] },
+        "position": { "type": "number" },
+        "targetSequence": { "type": "number" },
+        "byUid": { "type": "string", "maxLength": 128 },
+        "byName": { "type": "string", "maxLength": 100 },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "gameId", "sequence", "type", "byUid", "byName"]
+    }
+  },
+  "firestore": {
+    "/games/{gameId}": {
+      "schema": "Game",
+      "description": "Stores match room metadata, status, and turn info"
+    },
+    "/games/{gameId}/events/{eventId}": {
+      "schema": "GameEvent",
+      "description": "Event sourcing log of individual moves and rollbacks for state reconstruction"
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Public user profile and stats"
+    }
+  }
+}

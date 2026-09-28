@@ -1,0 +1,78 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Health check path for connection test
+    match /test/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // User profiles
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && request.auth.uid == userId
+        && incoming().uid == request.auth.uid
+        && incoming().displayName is string && incoming().displayName.size() <= 100;
+    }
+
+    // Game matches
+    match /games/{gameId} {
+      allow read: if isSignedIn();
+
+      allow create: if isSignedIn()
+        && isValidId(gameId)
+        && incoming().playerXUid == request.auth.uid
+        && incoming().id == gameId
+        && incoming().mode in ['ai', 'pvp']
+        && incoming().status in ['waiting', 'in_progress']
+        && incoming().currentTurn in ['X', 'O']
+        && incoming().eventCount >= 0;
+
+      allow update: if isSignedIn()
+        && isValidId(gameId)
+        // User must be playerX, playerO, or joining as playerO
+        && (
+          existing().playerXUid == request.auth.uid ||
+          existing().playerOUid == request.auth.uid ||
+          (existing().status == 'waiting' && (existing().playerOUid == '' || !('playerOUid' in existing())))
+        );
+
+      // Event Sourcing Subcollection: Moves and Rollbacks
+      match /events/{eventId} {
+        allow read: if isSignedIn();
+
+        allow create: if isSignedIn()
+          && isValidId(eventId)
+          && incoming().gameId == gameId
+          && incoming().type in ['MOVE', 'ROLLBACK']
+          && incoming().sequence is number
+          && incoming().byUid == request.auth.uid;
+
+        // Events are immutable once created (pure event sourcing)
+        allow update, delete: if false;
+      }
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "name": "Tic-Tac-Toe Chronicle",
+  "description": "Real-time multiplayer and Minimax AI Tic-Tac-Toe powered by Firebase Firestore event sourcing with live turn history replay and state rollback.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
